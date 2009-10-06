@@ -1,0 +1,111 @@
+/*
+* join_shp_csv.bsh
+*
+* Copyright (C) 2009 CartoLab. Universidade de A Coruña
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 3 of the License, or
+* any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*
+* AUTHORS:
+* Francisco Puga Alonso <fran.puga@gmail.com>
+*
+* KEYWORDS: beanshell, openjump, join, shapefile, cvs
+*
+* DEPENDENCIES: None
+*
+* DESCRIPTION: Join a SHP Layer with a CVS file. Process: Open the SHP Layer in the gui.
+* Execute the funcion run() in BeanShell. Close the Layer.
+* .shp, .dbf, .shx and the .cvs that contains the data that must be joined have to be in the same directory.
+* Read the comments of the variables in funcion run() for additional info
+*
+*
+* CHANGELOG:
+* 30/09/2009. Creation
+*/
+
+//TODO: Load the layer automatically within a bucle that iterates over the directories
+
+{
+
+import org.openjump.sigle.plugin.joinTable.JoinTable;
+import com.vividsolutions.jump.io.DriverProperties;
+import com.vividsolutions.jump.io.ShapefileWriter;
+import com.vividsolutions.jump.workbench.model.Layer;
+
+
+
+/**
+* save a layer to ESRI Shapefile format with the name layer_name
+**/
+public void saveLayer2SHP(FeatureCollection fc2shp, String layer_name, File pathfile){
+    DriverProperties shpDP = new DriverProperties();
+    ShapefileWriter shpWriter = new ShapefileWriter();
+
+    if (pathfile.exists()) {
+	uri=pathfile.getAbsolutePath()+File.separator+layer_name+".shp";
+	print (uri);
+	shpDP = new DriverProperties(uri);
+	shpWriter.write(fc2shp,shpDP);
+    } else print(pathfile+" doesn't exit.");
+}
+
+
+public void run(){
+
+	/***************/
+	/*  VARIABLES  */
+	/***************/
+
+	/* cvsIndexCodeField is the index of the field in the cvs file that contais the common field.
+	Numeration for class JoinTable begins at 0 */
+	cvsIndexCodeField = 2;
+
+	/* outFileName is the name of the .shp, .dbf and .shx after the join. Original files aren't modified */
+	outFileName="PARCELA_joined";
+
+	/* cvsFileName is the name of the cvs file with the data to join. */
+	cvsFileName = "/datos_csv_iso8859-1.txt"; //FIXME: The slash must be added in another way in the assign to cvsFile
+
+	/* nameCommonAttribute is the name of the attribute in the dbf that contains the common field */
+	nameCommonAttribute = "CODIGO";
+
+	/*** end of variables section ***/
+
+	l = wc.getLayerManager().getLayer(0);
+
+	/* dbfIndexCodeField is the index of the field in the dbf file that contais the common field.
+	Numeration of the attributes begins in 0, but remember that in the conversion from cvs to dbf field geometry is added */
+	dbfIndexCodeField = l.getFeatureCollectionWrapper().getFeatureSchema().getAttributeIndex(nameCommonAttribute);
+
+
+	shpNameFile = l.getDataSourceQuery().getDataSource().getProperties().get("File");
+	folderPath = new File(shpNameFile).getParentFile();
+
+	cvsFile = folderPath + cvsFileName;
+
+
+
+	t = new JoinTable(cvsFile);
+	t.setKeyIndex(cvsIndexCodeField);
+	t.build();
+	t.join(l,dbfIndexCodeField);
+
+
+
+	fc = l.getFeatureCollectionWrapper();
+	saveLayer2SHP(fc, outFileName, folderPath);
+
+}
+
+}
