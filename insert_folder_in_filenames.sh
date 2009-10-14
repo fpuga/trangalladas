@@ -36,7 +36,8 @@
 
 
 usage() {
-    echo "$0 -i initial_directory -o output_directory"
+    echo
+    echo "`basename $0` -i initial_directory -o output_directory"
     echo
     echo "DESCRIPTION: insert_folder_in_filename.sh search recursively (entering subdirectories) all files from an inicial directory and copy each file to a given directory with a name like <directory_name_that_contains the file>-filename"
     echo "BE AWARE: if directories or files contain spaces in the names script may fail"
@@ -49,24 +50,17 @@ usage() {
 
 indir='.'
 outdir='.'
+i=0
 
 IFS='
 '
-
-for if in `find $indir -iname '*'` ; do
-    str=`dirname $if`
-    prefix=`expr "$str" : '.*\(/.*\)' | cut -d'/' -f2`
-    of=${prefix}-`basename $if`
-
-    cp "$if"  "${outdir}/$of"
-done
 
 
 while [ $# -gt 0 ] ; do
     case $1
         in
         -i)
-            $indir=$2
+            indir=$2
             shift 2
             ;;
 
@@ -83,15 +77,19 @@ while [ $# -gt 0 ] ; do
 done
 
 
-
 if ! [ -d $outdir ] ; then echo "Destiny folder doesn't exist"; exit -1; fi
 
-for if in `find $indir -iname '*'` ; do
+for if in `find $indir -type f -iname '*'` ; do
     str=`dirname $if`
     prefix=`expr "$str" : '.*\(/.*\)' | cut -d'/' -f2`
     of=${prefix}-`basename $if`
 
-    cp "$if"  "${outdir}/$of"
+    if [ -e "${outdir}/$of" ] ; then
+        cp $if ${outdir}/${i}-${of}
+        let i++
+    else
+        cp "$if"  ${outdir}/$of
+    fi
 done
 
 exit 0
