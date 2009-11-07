@@ -91,7 +91,7 @@ def main(argv):
             if i-j-j*substractMistakes < cutPuntuation:
 
                 if (csv):
-                    print str(i) + ';' + str(j)
+                    print str(i) + ';' + str(j-1)
                 else:
                     print str(i) + " contestadas, máximo " + str(j-1) + " fallos"
                 break
