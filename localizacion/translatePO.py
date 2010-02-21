@@ -20,9 +20,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # AUTHORS:
-# Francisco Puga Alonso <fpuga@cartolab.es> <http://conocimientoabierto.es>
+# Francisco Puga Alonso <fran.puga@gmail.com> <http://conocimientoabierto.es>
 #
-# KEYWORDS: python, i18n, odt, odf, po, translate, opentran
+# KEYWORDS: python, i18n, po, translate, opentran
 #
 # DEPENDENCIES: beautifulsoup <http://www.crummy.com/software/BeautifulSoup/>, polib <http://bitbucket.org/izi/polib/>
 #
@@ -36,11 +36,12 @@ def description():
 # CHANGELOG:
 #  19/10/2009. Creation
 #  27/10/2009. Solved encoding issues
+#  21/02/2010. Added a way to handle more translation services
 #
 # TODO:
 # + allow write results to a file
 # + allow multiple consults in one invocation of the script
-# + add more translation motors and translate directions
+# + How to load the engines
 # + handled the UnicodeEncondeError to make a partial translation
 # + How to avoid the translation of the url placed in the text and other special characters
 # + Script fails when there are < in the text. Maybe we can write to the web services asking for parse that kind of symbols
@@ -61,13 +62,80 @@ import polib
 
 
 
+#######################
+# Engine definitions  #
+#######################
+
+class AbstractEngine:
+    """ Abstract class to define how must be the translation engines"""
+
+    url = ''
+    validTranslateDirs = ''
+    # translateDir = ''
+    query = {'direccion':'', 'marcar':'', 'cuadrotexto':''}
+
+
+    def isValidTranslationDir(self, translationDir):
+        return translationDir in self.validDirs
+
+
+    def setQuery(self, translationDir, mark):
+        error = False
+        self.query['marcar'] = mark
+        if self.isValidTranslationDir(translationDir):
+            self.query['direccion'] = translationDir
+            error = True
+
+        return error
+
+    def setTextToTranslate(self, text):
+        error = False
+        try:
+            self.query['cuadrotexto'] = text.encode('iso8859-1')
+        except UnicodeEncodeError:
+            print "Encoding error in msgid. You should check this string."
+            error = True
+
+        return error
+
+
+    def parsePage(self, page):
+        pass
+
+
+class UvigoEngine(AbstractEngine):
+
+    def __init__(self):
+        self.url = 'http://sli.uvigo.es/tradutor/tradtext.php'
+        self.validDirs = ('gl-es', 'es-gl')
+
+    def parsePage(self, page):
+        return BeautifulSoup(page).find('div', id="contenedor").string
+
+
+class ImaxinEngine(AbstractEngine):
+
+    def __init__(self):
+        self.url = 'http://www.opentrad.com/gl/opentrad/traducir'
+        self.validDirs = ("es-en","en-es","es-pt","pt-es","fr-es","es-fr","es-ca","ca-es","en-ca","ca-en","es-eu","es-gl","gl-es","en-gl","gl-en","pt-gl","gl-pt","es-en_US","pt-ca","ca-pt","es-pt_BR","es-ca_valencia","es-ast","ast-es","fr-ca","ca-fr","br-fr","es-ro","ro-es","cy-en","en-eo","es-eo","ca-eo","nn-nb","nb-nn","oc-ca","ca-oc","oc-es","es-oc")
+
+    def parsePage(self, page):
+        text = page.read()
+        i = text.find('<script')
+        return text[:i]
+
+
+
+
 def usage(msg):
     print description.__doc__
     print '\nUsage: python %s -i input-file [-d direction] [-m]' % (sys.argv[0])
     print '-i input-file: The po that is going to be translated'
     print '-d direction: Translation directory. Default gl-es. Allowed gl-es, es-gl'
-    print '-m: Mark the strings where exists a word that opentrand dont understand as fuzzy\n'
+    print '-m: Mark the strings where exists a word that opentrand dont understand as fuzzy'
+    print '-e: Engine. Valid engines are "ImaxinEngine" and "UvigoEngine"\n'
     sys.exit(msg)
+
 
 
 def getIt(c, p, query):
@@ -80,23 +148,41 @@ def getIt(c, p, query):
     soup = BeautifulStoneSoup(page)
 
 
+def getEngine(engine):
+    """
+    A translation engine is define by its name, its url, its valid directions, and the way it must be parsed. To add a new engine you must add here some parameters and create a new function to parse de engine
+    """
+    validEngine = True
+    if engine['name'] == 'uvigo':
+        engine['url'] = 'http://sli.uvigo.es/tradutor/tradtext.php'
+        engine['dir'] = ('gl-es', 'es-gl')
+    elif engine['name'] == 'imaxin':
+        engine['url']= 'http://www.opentrad.com/gl/opentrad/traducir'
+        engine['dir'] = ("es-en","en-es","es-pt","pt-es","fr-es","es-fr","es-ca","ca-es","en-ca","ca-en","es-eu","es-gl","gl-es","en-gl","gl-en","pt-gl","gl-pt","es-en_US","pt-ca","ca-pt","es-pt_BR","es-ca_valencia","es-ast","ast-es","fr-ca","ca-fr","br-fr","es-ro","ro-es","cy-en","en-eo","es-eo","ca-eo","nn-nb","nb-nn","oc-ca","ca-oc","oc-es","es-oc")
+    else:
+        validEngine = False
+
+    return validEngine
+
+
 def main(argv):
 
-    marcar = False
 
-    url = 'http://sli.uvigo.es/tradutor/tradtext.php'
-    query = {'direccion':'gl-es', 'marcar':'', 'cuadrotexto':''}
+    # tmp variables to parse input arguments and set defaults values
+    engineName = 'ImaxinEngine'
+    translationDir = ''
+    mark = False
 
     try:
-        opts, args = getopt.getopt(argv, "hmi:d:", ["help", "--mark", "--input-file=", "--direction="])
+        opts, args = getopt.getopt(argv, "hmi:d:e:", ["help", "--mark", "--input-file=", "--direction=", "--engine="])
     except getopt.GetoptError:
         usage("\nError: Probably you tipe some argumet that is not in the list of expected arguments")
-x
+
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             usage(None)
         elif opt in ('-m', '--mark'):
-            marcar = True
+            mark = True
         elif opt in ('-i', '--input-file'):
             try:
                 po = polib.pofile(arg)
@@ -104,33 +190,30 @@ x
                 print "\n\tA problem was encountered opening de file, probably it doesn't exist\n"
                 sys.exit()
         elif opt in ('-d', '--direction'):
-            # TODO: + allow more directions.
-            #       + not hard coded the directions here
-            if arg in ('gl-es','es-gl'):
-                query['direccion':arg]
-            else:
-                usage('Translate direction incorrect')
-
+            translationDir = arg
+        elif opt in ('-e', '--engine'):
+            engineName = arg
         else:
             usage('\nError: ' + opt + 'is not a valid argument')
 
+    # load the engine, and its configuration params
+    try:
+        engine = globals()[engineName]()
+    except KeyError:
+        print engineName + 'is not a valid engine'
+        sys.exit()
+
+    if not engine.setQuery (translationDir, mark):
+        print 'Translation direction is not valid for this engine'
+        sys.exit()
 
     for entry in po:
         print entry.msgid
+        engine.setTextToTranslate(entry.msgid)
+        page = urllib2.urlopen(engine.url,urllib.urlencode(engine.query))
+        entry.msgstr = engine.parsePage(page)
+        print entry.msgstr
 
-        try:
-            query['cuadrotexto'] = entry.msgid.encode('iso8859-1')
-        except UnicodeEncodeError:
-            print "Encoding error in msgid. You should check this string."
-        else:
-            page = urllib2.urlopen(url,urllib.urlencode(query))
-            contenedor = BeautifulSoup(page).find('div', id="contenedor").string
-            entry.msgstr = contenedor
-            print contenedor
-
-        i += 1
-        if i == 5:
-            sys.exit()
 
     po.save()
 
