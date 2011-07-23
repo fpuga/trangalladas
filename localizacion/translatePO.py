@@ -114,6 +114,7 @@ class UvigoEngine(AbstractEngine):
 
 
 class ImaxinEngine(AbstractEngine):
+    query = {'marcar':'', 'cuadrotexto':'', 'idioma-traducir_texto':'', 'idioma-original_texto':''}
 
     def __init__(self):
         self.url = 'http://www.opentrad.com/gl/opentrad/traducir'
@@ -125,6 +126,16 @@ class ImaxinEngine(AbstractEngine):
         return text[:i]
 
 
+    def setQuery(self, translationDir, mark):
+        error = False
+        self.query['marcar'] = mark
+        if self.isValidTranslationDir(translationDir):
+            tokens = translationDir.split('-')
+            self.query['idioma-original_texto'] = tokens[0]
+            self.query['idioma-traducir_texto'] = tokens[1]
+            error = True
+
+        return error
 
 
 def usage(msg):
