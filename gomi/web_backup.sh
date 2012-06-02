@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Autor: Francisco Puga <fran.puga (at) gmail.com>
 # Licencia: Dominio Público
@@ -20,12 +20,13 @@ else
     conectionFile=`echo "$1"`
 fi
 
+. "$conectionFile"
 
 # ruta al archivo de dump de la bd. No es necesario que toques esta
 # variable a no ser que por algún motivo no quieras usar la raiz del blog
 DUMP_DB="${BLOG_DIR}_BD.SQL"
 
-
-ssh ${USER}@${SERVER} "mysqldump --opt --user=$USER_DB -p $CLAVE_BD --host=$SERVER_DB $NAME_DB > $DUMP_DB"
-rsync -av --delete  ${USER}@${SERVER}:$BLOG_DIR $BACKUP_DIR
-ssh ${USER}@${SERVER} "rm $DUMP_DB"
+# echo "ssh ${USER_SSH}@${SERVER} mysqldump --opt --user=$USER_DB -p$CLAVE_BD --host=$SERVER_DB $NAME_DB > $DUMP_DB"
+ssh ${USER_SSH}@${SERVER} "mysqldump --opt --user=$USER_DB -p$CLAVE_BD --host=$SERVER_DB $NAME_DB > $DUMP_DB"
+rsync -av --delete  ${USER_SSH}@${SERVER}:$BLOG_DIR $BACKUP_DIR
+ssh ${USER_SSH}@${SERVER} "rm $DUMP_DB"
