@@ -28,5 +28,8 @@ DUMP_DB="${BLOG_DIR}_BD.SQL"
 
 # echo "ssh ${USER_SSH}@${SERVER} mysqldump --opt --user=$USER_DB -p$CLAVE_BD --host=$SERVER_DB $NAME_DB > $DUMP_DB"
 ssh ${USER_SSH}@${SERVER} "mysqldump --opt --user=$USER_DB -p$CLAVE_BD --host=$SERVER_DB $NAME_DB > $DUMP_DB"
+echo "Step 1/3 done. db dumped"
 rsync -av --delete  ${USER_SSH}@${SERVER}:$BLOG_DIR $BACKUP_DIR
+echo "Step 2/3 done. rsync done."
 ssh ${USER_SSH}@${SERVER} "rm $DUMP_DB"
+echo "Step 3/3 done. db dump deleted from server"
