@@ -8,12 +8,12 @@ with open("list.txt") as f:
         url = url.rstrip('\n')
         try:
             response = urllib2.urlopen(url)
-            print "{} \t\t\t - OK".format(url)
+            print "{:<42}{:<5}".format(url, '- OK')
         except urllib2.HTTPError, e:
-            print "Error Code: ", e.code
+            print "{} \t\t\t - HTTP Error Code: ", e.code
             print e.info()
         except urllib2.URLError, e2:
-            print "Error Code: ", e2.reason
+            print "{} \t\t\t - URL Error Code: ", e2.reason
         finally:
             response.close()
 
